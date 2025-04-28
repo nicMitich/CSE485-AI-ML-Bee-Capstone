@@ -24,7 +24,7 @@ from utils import (
 def load_model():
     print("Loading model")
 
-    return YOLO("models/yolo11l-bee.pt", task="detect")
+    return YOLO("runs/detect/train/weights/best.pt", task="detect")
 
 
 # for better performance, play around with batch_sz

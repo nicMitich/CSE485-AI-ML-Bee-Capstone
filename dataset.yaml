@@ -1,0 +1,6 @@
+---
+train: C:/Users/nicho/CSE485/BeeCapstone/datasets/images/train
+val: C:/Users/nicho/CSE485/BeeCapstone/datasets/images/val
+
+nc: 2
+names: ['Worker Bee', 'Queen Bee']
