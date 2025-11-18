@@ -67,77 +67,22 @@ def calc_progress_metrics(frame_idx, total_frames, start_time):
 
 
 def process_frame_detections(frame_num, detections, model_names, is_tracking=False):
-    """
-    Process a single frame's detections and ensure only one object is marked as 'queen'.
-
-    Parameters:
-        frame_number (int): The frame number (1-based).
-        detections (list): A list of detections.
-        model_names (list): A list of class names indexed by class ID.
-
-    Returns:
-        list of tuples in the format:
-                        detection: (frame_number, x1, y1, x2, y2, label, conf)
-                        tracking:  (frame_number, x1, y1, x2, y2, label, conf, track_id)
-    """
     boxes = detections.boxes
     frame_nums = np.full(len(boxes), frame_num)
-    cls_tensor = boxes.cls.cpu().numpy()
-    conf_tensor = boxes.conf
-    xyxy_tensor = boxes.xyxy
+    cls_ids = boxes.cls.cpu().numpy().astype(int)
+    confs = boxes.conf.cpu().numpy()
+    xyxy = boxes.xyxy.cpu().numpy()
+    class_names = np.array([model_names[i] for i in cls_ids])
 
-    # convert class ids to names
-    class_names = np.array([model_names[int(i)] for i in cls_tensor])
-
-    # find queen idxs
-    queen_mask = class_names == "queen"
-    if queen_mask.any():
-        queen_confs = conf_tensor[queen_mask]
-        best_queen_idx = queen_mask.nonzero()[0][queen_confs.argmax()]
-
-        # create results array
-        if is_tracking:
-            track_ids = boxes.id.cpu().numpy()
-            results = np.column_stack(
-                (
-                    frame_nums,
-                    xyxy_tensor.cpu().numpy(),
-                    np.where(np.arange(len(boxes)) == best_queen_idx, "queen", "bee"),
-                    conf_tensor.cpu().numpy(),
-                    track_ids,
-                )
-            )
-        else:
-            results = np.column_stack(
-                (
-                    frame_nums,
-                    xyxy_tensor.cpu().numpy(),
-                    np.where(np.arange(len(boxes)) == best_queen_idx, "queen", "bee"),
-                    conf_tensor.cpu().numpy(),
-                )
-            )
+    if is_tracking:
+        track_ids = boxes.id.cpu().numpy()
+        results = np.column_stack(
+            (frame_nums, xyxy, class_names, confs, track_ids)
+        )
     else:
-        # all bees case
-        if is_tracking:
-            track_ids = boxes.id.cpu().numpy()
-            results = np.column_stack(
-                (
-                    frame_nums,
-                    xyxy_tensor.cpu().numpy(),
-                    np.full(len(boxes), "bee"),
-                    conf_tensor.cpu().numpy(),
-                    track_ids,
-                )
-            )
-        else:
-            results = np.column_stack(
-                (
-                    frame_nums,
-                    xyxy_tensor.cpu().numpy(),
-                    np.full(len(boxes), "bee"),
-                    conf_tensor.cpu().numpy(),
-                )
-            )
+        results = np.column_stack(
+            (frame_nums, xyxy, class_names, confs)
+        )
 
     return results
 
@@ -146,11 +91,17 @@ def render_boxes(frame, frame_results, bee_color, queen_color):
     boxes = frame_results[:, 1:5]
     classes = frame_results[:, 5]
 
-    colors = [bee_color if cls == "bee" else queen_color for cls in classes]
-
-    for box, color in zip(boxes, colors):
+    for box, cls in zip(boxes, classes):
         x1, y1, x2, y2 = np.array(box, dtype=np.float32).astype(np.int32)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+        if cls == "Queen Bee":
+            color = queen_color
+            thickness = 4
+        else:
+            color = bee_color
+            thickness = 2
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
 
     return frame
 

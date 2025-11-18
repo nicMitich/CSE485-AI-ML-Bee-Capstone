@@ -24,7 +24,7 @@ from utils import (
 def load_model():
     print("Loading model")
 
-    return YOLO("runs/detect/train3/weights/best.pt", task="detect")
+    return YOLO("runs/detect/train2/weights/best.pt", task="detect")
 
 
 # for better performance, play around with batch_sz
@@ -94,7 +94,7 @@ def run_inference(
                 progress_callback(progress, text)
         else:
             # tracking mode requires frame by frame (no batching)
-            track_boxes = model.track(frame, persist=True)[0]
+            track_boxes = model.track(frame, persist=False)[0]
             frame_results = process_frame_detections(
                 frame_num=frame_idx + 1,
                 detections=track_boxes,
@@ -240,12 +240,9 @@ def main():
         st.session_state.overlay_video_path = None
 
     # colors are in bgr
-    if "path_color" not in st.session_state:
-        st.session_state.path_color = (255, 255, 255)  # white
-    if "bee_color" not in st.session_state:
-        st.session_state.bee_color = (0, 255, 255)  # yellow
-    if "queen_color" not in st.session_state:
-        st.session_state.queen_color = (0, 0, 255)  # red
+    st.session_state.bee_color = (0, 255, 255)       # Yellow BGR
+    st.session_state.queen_color = (128, 0, 128)     # Purple BGR
+    st.session_state.path_color = (255, 255, 255)    # White
 
     # Load model once
     model = load_model()
@@ -345,14 +342,9 @@ def main():
                 st.toast(f"Saving output to {save_path}")
                 save_results_to_csv(save_path, st.session_state.results, mode.lower())
 
-            st.subheader("Set Colors")
-            color_row = st.columns([1, 1, 1, 9])
-            with color_row[0]:
-                bee_color = st.color_picker("Bee Color", value="#FFFF00")  # yellow
-            with color_row[1]:
-                queen_color = st.color_picker("Queen Color", value="#FF0000")  # red
-            with color_row[2]:
-                path_color_placeholder = st.empty()
+            bee_color = "#FFFF00"
+            queen_color = "#800080"
+            path_color = "#FFFFFF"
 
             st.subheader("Toggle Options")
             checkbox_row = st.columns([1, 1, 10])
@@ -374,9 +366,6 @@ def main():
             draw_paths = False
             if mode == "Tracking":
                 draw_paths = draw_paths_placeholder.checkbox("Draw Paths", value=False)
-                path_color = path_color_placeholder.color_picker(
-                    "Path Color", value="#FFFFFF"
-                )  # white
                 st.session_state.path_color = hex_to_bgr(path_color)
 
             csv_button_placeholder.button(
